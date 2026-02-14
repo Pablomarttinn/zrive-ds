@@ -57,10 +57,14 @@ def call_api(url, params, schema):
 
 
 def get_data_meteo_api(ciudad):
-    params = {"start_date": "2010-01-01", "end_date": "2020-12-31"}
-    params["latitude"] = coordinates[ciudad]["latitude"]
-    params["longitude"] = coordinates[ciudad]["longitude"]
-    params["daily"] = ",".join(variables)
+    try:
+        params = {"start_date": "2010-01-01", "end_date": "2020-12-31"}
+        params["latitude"] = coordinates[ciudad]["latitude"]
+        params["longitude"] = coordinates[ciudad]["longitude"]
+        params["daily"] = ",".join(variables)
+    except KeyError:
+        print(f"{ciudad} is not defined in Coordinates, please define and try again")
+        return None
 
     data = call_api(api_url, params, schema_meteo)
 
@@ -93,22 +97,19 @@ def graficar(variables, ciudad):
         plt.title(f"{key} in {ciudad} from 2010 to 2020")
         plt.xlabel("time")
         plt.ylabel(f"{key} in {variables['units'][key]}")
-        # plt.savefig(f'{ciudad}_{key}.png') en caso de querer compara una misma variable
-        # en distintas ciudades, ya que la funcion obliga a cerrar unas ventanas antes de
-        # graficar la siguiente ciudad, se podría descomentar este linea y guardar las imágenes
-        # en el dispositivo para posterior tratamiento/uso.
         plt.show(block=False)
     input("Press Enter to close the figures")
 
 
-mad_data = get_data_meteo_api("Madrid")
-mad_interest_data = extraccion_variables(mad_data)
-graficar(mad_interest_data, "Madrid")
+if __name__ == "__main__":
+    mad_data = get_data_meteo_api("Madrid")
+    mad_interest_data = extraccion_variables(mad_data)
+    graficar(mad_interest_data, "Madrid")
 
-lon_data = get_data_meteo_api("London")
-lon_interest_data = extraccion_variables(lon_data)
-graficar(lon_interest_data, "London")
+    lon_data = get_data_meteo_api("London")
+    lon_interest_data = extraccion_variables(lon_data)
+    graficar(lon_interest_data, "London")
 
-rio_data = get_data_meteo_api("Rio")
-rio_interest_data = extraccion_variables(rio_data)
-graficar(rio_interest_data, "Rio")
+    rio_data = get_data_meteo_api("Rio")
+    rio_interest_data = extraccion_variables(rio_data)
+    graficar(rio_interest_data, "Rio")
