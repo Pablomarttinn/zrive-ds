@@ -1,12 +1,11 @@
-
 from src.module_1.module_1_meteo_api import (
     call_api,
     get_data_meteo_api,
     extraccion_variables,
+    calculo_estadisticos,
 )
 from unittest.mock import patch, Mock
-from datetime import datetime
-import numpy as np
+import pandas as pd
 
 
 def test_success_call_api():
@@ -89,25 +88,65 @@ def test_get_data_meteo_api_cityFail():
 
 
 def test_extraccion_variables():
-    fake_data = {
-        "daily_units": {"Time": "x", "Var1": "y", "Var2": "z"},
+    data = {
         "daily": {
-            "time": ["2010-02-14", "2015-03-12"],
-            "Var1": [1, 2, 3, 4],
-            "Var2": [1, 3, 4, 5],
-        },
+            "time": ["2024-01-01", "2024-01-02"],
+            "wind_speed_10m_max": [5.0, 7.0],
+            "precipitation_sum": [0.0, 2.5],
+            "temperature_2m_mean": [10.0, 12.0],
+        }
     }
-    fecha_str = ["2010-02-14", "2015-03-12"]
-    fecha_dt = [datetime.strptime(date, "%Y-%m-%d") for date in fecha_str]
-    variables = {
-        "time": fecha_dt,
-        "units": {"Time": "x", "Var1": "y", "Var2": "z"},
-        "Var1": np.array([1, 2, 3, 4]),
-        "Var2": np.array([1, 3, 4, 5]),
-    }
-    result = extraccion_variables(fake_data)
 
-    assert result["time"] == variables["time"]
-    assert result["units"] == variables["units"]
-    np.testing.assert_array_equal(result["Var1"], variables["Var1"])
-    np.testing.assert_array_equal(result["Var2"], variables["Var2"])
+    df = extraccion_variables(data)
+
+    # Type
+    assert isinstance(df, pd.DataFrame)
+
+    # Expected columns
+    expected_cols = {
+        "time",
+        "wind_speed_10m_max",
+        "precipitation_sum",
+        "temperature_2m_mean",
+    }
+    assert expected_cols.issubset(df.columns)
+
+    # Type of time column
+    assert pd.api.types.is_datetime64_any_dtype(df["time"])
+
+
+def test_calculo_estadisticos():
+    df = pd.DataFrame(
+        {
+            "time": pd.to_datetime(["2024-01-01", "2024-01-15", "2024-02-01"]),
+            "wind_speed_10m_max": [4.0, 6.0, 10.0],
+            "precipitation_sum": [1.0, 2.0, 3.0],
+            "temperature_2m_mean": [8.0, 12.0, 20.0],
+        }
+    )
+
+    df_wind, df_precip, df_temp = calculo_estadisticos(df)
+
+    # Types
+    assert isinstance(df_wind, pd.DataFrame)
+    assert isinstance(df_precip, pd.DataFrame)
+    assert isinstance(df_temp, pd.DataFrame)
+
+    # Monthly index
+    assert isinstance(df_wind.index, pd.PeriodIndex)
+    assert df_wind.index.freqstr == "M"
+
+    # Only the row we want
+    assert df_wind.shape[1] == 1
+    assert df_precip.shape[1] == 1
+    assert df_temp.shape[1] == 1
+
+    # Expected values
+    # Enero wind mean = (4 + 6) / 2 = 5
+    assert df_wind.loc["2024-01", "wind_speed_10m_max"] == 5.0
+
+    # Febrero precip sum = 3
+    assert df_precip.loc["2024-02", "precipitation_sum"] == 3.0
+
+    # Febrero temp mean = 20
+    assert df_temp.loc["2024-02", "temperature_2m_mean"] == 20.0

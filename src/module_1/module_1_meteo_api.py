@@ -1,6 +1,5 @@
 import requests
-from datetime import datetime
-import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from jsonschema import validate, ValidationError
 
@@ -76,40 +75,52 @@ def get_data_meteo_api(ciudad):
 
 
 def extraccion_variables(data):
-    variables = {}
-    variables["time"] = [
-        datetime.strptime(date, "%Y-%m-%d") for date in data["daily"]["time"]
-    ]
-    variables["units"] = data["daily_units"].copy()
-    for key in data["daily"].keys():
-        if key != "time":
-            variables[key] = np.array(data["daily"][key])
+    df_variables = pd.DataFrame(data["daily"])
+    df_variables["time"] = pd.to_datetime(df_variables["time"])
 
-    return variables
+    return df_variables
 
 
-def graficar(variables, ciudad):
-    x = variables["time"][::21]
-    variable_keys = [k for k in variables.keys() if k != "time" and k != "units"]
-    for key in variable_keys:
-        plt.figure()
-        plt.plot(x, variables[key][::21])
-        plt.title(f"{key} in {ciudad} from 2010 to 2020")
-        plt.xlabel("time")
-        plt.ylabel(f"{key} in {variables['units'][key]}")
-        plt.show(block=False)
-    input("Press Enter to close the figures")
+def calculo_estadisticos(df):
+    df["time"] = df["time"].dt.to_period("M")
+    df_wind = df.groupby("time")[["wind_speed_10m_max"]].mean()
+    df_precipitation = df.groupby("time")[["precipitation_sum"]].sum()
+    df_temp = df.groupby("time")[["temperature_2m_mean"]].mean()
+
+    return df_wind, df_precipitation, df_temp
+
+
+def graficar(tuple_df, ciudad):
+    fig, axes = plt.subplots(nrows=len(tuple_df), ncols=1, figsize=(8, 5))
+
+    for ax, df in zip(axes, tuple_df):
+        df.index = df.index.to_timestamp()
+        var = df.columns[0]
+        ax.plot(df.index, df[var], label="Monthly Mean")
+        ax.set_title(f"{var} in {ciudad}")
+
+    axes[0].legend(loc="upper left")
+    axes[-1].set_xlabel("Mes")
+    fig.tight_layout()
+    plt.show()
+
+
+def main():
+    mad_data = get_data_meteo_api("Madrid")
+    df_mad_variables = extraccion_variables(mad_data)
+    df_mad_statistics = calculo_estadisticos(df_mad_variables)
+    graficar(df_mad_statistics, "Madrid")
+
+    lon_data = get_data_meteo_api("London")
+    df_lon_variables = extraccion_variables(lon_data)
+    df_lon_statistics = calculo_estadisticos(df_lon_variables)
+    graficar(df_lon_statistics, "London")
+
+    rio_data = get_data_meteo_api("Rio")
+    df_rio_variables = extraccion_variables(rio_data)
+    df_rio_statistics = calculo_estadisticos(df_rio_variables)
+    graficar(df_rio_statistics, "Rio")
 
 
 if __name__ == "__main__":
-    mad_data = get_data_meteo_api("Madrid")
-    mad_interest_data = extraccion_variables(mad_data)
-    graficar(mad_interest_data, "Madrid")
-
-    lon_data = get_data_meteo_api("London")
-    lon_interest_data = extraccion_variables(lon_data)
-    graficar(lon_interest_data, "London")
-
-    rio_data = get_data_meteo_api("Rio")
-    rio_interest_data = extraccion_variables(rio_data)
-    graficar(rio_interest_data, "Rio")
+    main()
