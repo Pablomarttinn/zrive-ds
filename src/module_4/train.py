@@ -49,7 +49,7 @@ TRAINING_COLS = [
 ]
 
 MODEL_DIR = "/home/pablomartin/ZriveDs/zrive-ds/models"
-DATA_PATH = "/home/pablomartin/ZriveDs/zrive-ds/data/feature_frame.csv"
+DATA_PATH = "/home/pablomartin/ZriveDs/zrive-ds/data/module3/feature_frame.csv"
  
 def load_data_csv(path: str) -> pd.DataFrame:
     """Load training data from a local CSV file."""
@@ -115,7 +115,7 @@ def handler_fit(event: dict, _) -> dict:
         pipeline.fit(X, y)
         logger.info("Training complete.")
  
-        # ── 5. Name & save ───────────────────────────────────────────────────
+        
         today = datetime.today().strftime("%Y_%m_%d")
         model_name = f"push_{today}"
         model_path = save_model(pipeline, MODEL_DIR, model_name)
