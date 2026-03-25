@@ -17,6 +17,8 @@ jupyter = "^1.1.1"
 boto3 = "^1.42.54"
 pyarrow = "^23.0.1"
 pathlib = "^1.0.1"
+python-dotenv = "^1.2.2"
+seaborn = "^0.13.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
